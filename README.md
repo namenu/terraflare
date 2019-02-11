@@ -1,26 +1,24 @@
 ## Terraflare
 
-### Exporting DNS Records
+Dump Cloudflare configurations in Terraform configuration format.
 
-1. Install Clojure.
+### HOW TO
 
-    ```sh
-    brew install clojure
-    ```
-
-2. Setup CloudFlare ID with secret.
+1. Setup CloudFlare ID with secret.
 
     ```sh
     export CLOUDFLARE_EMAIL={{ YOUR-CF-ID }}
     export CLOUDFLARE_TOKEN={{ YOUR-CF-TOKEN }}
     ```
 
-3. Export json for a domain. e.g.,
+2. Export json for a domain. e.g.,
 
     ```sh
-    clojure -m terraflare.record ridi.com
+    # to export DNS Records
+    clojure -m terraflare.dns-records ridi.com
+
+    # to export Page Rules
+    clojure -m terraflare.pagerules ridi.com
     ```
 
-4. Go [hcl2json](https://www.hcl2json.com/) and get `.hcl` from the output.
-
-5. GOTO 3 until you don't need more.
+3. Go [hcl2json](https://www.hcl2json.com/) and get `.hcl` from the output if you want.

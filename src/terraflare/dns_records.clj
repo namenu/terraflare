@@ -1,46 +1,7 @@
-(ns terraflare.record
-  (:require [clj-http.client :as client]
-            [clojure.data.json :as json]
-            [clojure.string :as str]))
-
-(def CF-EMAIL (System/getenv "CLOUDFLARE_EMAIL"))
-(def CF-TOKEN (System/getenv "CLOUDFLARE_TOKEN"))
-
-(def CF-BASE-URL "https://api.cloudflare.com/client/v4/")
-
-
-(defn- cf-send-api
-  ([uri]
-   (cf-send-api uri {:page 1}))
-  ([uri params]
-   (when-let [response (client/get (str CF-BASE-URL uri)
-                                   {:as           :json
-                                    :headers      {"X-Auth-Email" CF-EMAIL
-                                                   "X-Auth-Key"   CF-TOKEN}
-                                    :query-params params})]
-     (-> (:body response)
-         (json/read-str :key-fn keyword)))))
-
-
-(defn cf-zone-id [domain]
-  (when-let [response (cf-send-api "zones")]
-    (->> (:result response)
-         (drop-while #(not= (:name %) domain))
-         first
-         :id)))
-
-
-(defn cf-dns-list [zone-id]
-  (let [url (str "zones/" zone-id "/dns_records")]
-    (when-let [body (cf-send-api url)]
-      (let [{:keys [page total_pages]} (:result_info body)]
-        ; fetch to the end page
-        (loop [records  (:result body)
-               cur_page (inc page)]
-          (if (<= cur_page total_pages)
-            (let [body (cf-send-api url {:page cur_page})]
-              (recur (concat records (:result body)) (inc cur_page)))
-            records))))))
+(ns terraflare.dns-records
+  (:require [clojure.data.json :as json]
+            [clojure.string :as str]
+            [terraflare.cloudflare :as cf]))
 
 
 (defn dissoc-with
@@ -90,8 +51,7 @@
         convert    (fn [m]
                      {:id     (:id m)
                       :record (preprocess m)
-                      :name   (gen-name m)})
-        ]
+                      :name   (gen-name m)})]
     (map convert dns-records)))
 
 
@@ -119,8 +79,8 @@
 
 
 (defn tf-json-from [domain]
-  (let [zone-id     (cf-zone-id domain)
-        dns-records (cf-dns-list zone-id)
+  (let [zone-id     (cf/zone-id domain)
+        dns-records (cf/dns-list zone-id)
         resources   (records->resources dns-records)]
 
     ;; write json file
@@ -130,9 +90,7 @@
          (spit (str domain ".json")))
 
     ;; print import command
-    (resources->import domain resources)
-
-    ))
+    (resources->import domain resources)))
 
 
 (defn -main [& args]
@@ -143,9 +101,9 @@
 (comment
 
   (def domain "ridi.io")
-  @(def zone-id (cf-zone-id domain))
+  @(def zone-id (cf/zone-id domain))
 
-  @(def dns-records (cf-dns-list zone-id))
+  @(def dns-records (cf/dns-list zone-id))
 
   @(def resources (records->resources dns-records))
 
