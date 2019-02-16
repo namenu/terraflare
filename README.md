@@ -1,3 +1,7 @@
+> This is of no use. Official support [here](https://github.com/cloudflare/cf-terraforming).
+
+
+
 ## Terraflare
 
 Dump Cloudflare configurations in Terraform configuration format.
